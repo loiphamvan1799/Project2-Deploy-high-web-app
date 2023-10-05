@@ -1,0 +1,18 @@
+[
+    {
+        "ParameterKey": "EnvironmentName",
+        "ParameterValue": "ExamProject2"
+    },
+    {
+        "ParameterKey": "AMI",
+        "ParameterValue": "ami-053b0d53c279acc90"
+    },
+    {
+        "ParameterKey": "InstanceType",
+        "ParameterValue": "t3.medium"
+    },
+    {
+        "ParameterKey": "KeyPair",
+        "ParameterValue": "key"
+    }
+]

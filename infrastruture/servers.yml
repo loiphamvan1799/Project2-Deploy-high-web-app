@@ -1,0 +1,179 @@
+Description: >
+    Project of LoiPV2 from Udacity - server config
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+
+  AMI:
+    Description: The ImageId of Server ec2
+    Type: String
+
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    
+  KeyPair:
+    Description: The mangage Policy Arn to use S3 bucket
+    Type: String
+
+Resources:
+  LoadBalancerSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http to our load balancer
+      VpcId:
+        Fn::ImportValue: !Sub '${EnvironmentName}-VPCID'
+
+  WebServerSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http to our hosts and SSH access
+      VpcId:
+        Fn::ImportValue: !Sub '${EnvironmentName}-VPCID'
+
+  WebServerInboundRuleHTTP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: "WebServerSecGroup"
+      IpProtocol: "tcp"
+      FromPort: 80
+      ToPort: 80
+      CidrIp: "0.0.0.0/0"
+
+  WebServerOutboundRuleALL:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId:
+        Ref: "WebServerSecGroup"
+      IpProtocol: "-1"
+      FromPort: -1
+      ToPort: -1
+      CidrIp: "0.0.0.0/0"
+
+  LoadBalancerInboundRuleHTTP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: "LoadBalancerSecGroup"
+      IpProtocol: "tcp"
+      FromPort: 80
+      ToPort: 80
+      CidrIp: "0.0.0.0/0"
+
+  LoadBalancerOutboundRuleHTTP:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId:
+        Ref: "LoadBalancerSecGroup"
+      IpProtocol: "-1"
+      CidrIp: "0.0.0.0/0"
+
+  WebServerLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          sudo apt-get update -y
+          sudo apt-get install apache2 -y
+          sudo systemctl start apache2.service       
+          cd /var/www/html
+          echo "It works! Udagram, Udacity" > index.html   
+      # ToDo: AMI ID of Ubuntu Linux machine. Too get one, try creating a VM from the web console. 
+      ImageId: !Ref AMI
+      # ToDo: Change the key-pair name, as applicable to you. 
+      KeyName: !Ref KeyPair
+      SecurityGroups:
+      - Ref: WebServerSecGroup
+      InstanceType: !Ref InstanceType
+      BlockDeviceMappings:
+      - DeviceName: "/dev/sdk"
+        Ebs:
+          VolumeSize: '10'
+
+  WebServerGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier:
+      - Fn::ImportValue: 
+          !Sub "${EnvironmentName}-PRIV-NETS"
+      LaunchConfigurationName:
+        Ref: WebServerLaunchConfig
+      MinSize: '4'
+      MaxSize: '6'
+      TargetGroupARNs:
+      - Ref: WebServerTargetGroup
+
+  WebServerLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Subnets:
+        - Fn::ImportValue: !Sub "${EnvironmentName}-PUB1-SN"
+        - Fn::ImportValue: !Sub "${EnvironmentName}-PUB2-SN"
+      SecurityGroups: 
+        - Ref: LoadBalancerSecGroup
+      LoadBalancerAttributes:
+        - Key: access_logs.s3.enabled
+          Value: "true"
+        - Key: access_logs.s3.bucket
+          Value:
+            Fn::ImportValue: !Sub "${EnvironmentName}-S3Logs"
+
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn: !Ref WebServerTargetGroup
+      LoadBalancerArn: !Ref WebServerLoadBalancer
+      Port: '80'
+      Protocol: HTTP
+
+  LoadBalancerListenerRule:
+      Type: AWS::ElasticLoadBalancingV2::ListenerRule
+      Properties:
+        Actions:
+        - Type: forward
+          TargetGroupArn: !Ref 'WebServerTargetGroup'
+        Conditions:
+        - Field: path-pattern
+          Values: [/]
+        ListenerArn: !Ref 'Listener'
+        Priority: 1
+
+  WebServerTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: UdagramTargetGroup
+      Port: 80
+      Protocol: HTTP
+      VpcId: 
+        Fn::ImportValue: !Sub '${EnvironmentName}-VPCID'
+      HealthCheckEnabled: true
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: /
+      HealthCheckPort: traffic-port
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 2
+
+Outputs:
+  WebServerLoadBalancerURL:
+    Description: Load balancer URL with http:// in front
+    Value:
+      Fn::Sub:
+        - "http://${load_balancer_dns_name}"
+        - load_balancer_dns_name:
+            Fn::GetAtt: "WebServerLoadBalancer.DNSName"
+    Export:
+      Name: !Sub ${EnvironmentName}-LoadBalancerDNSName
+
+  LoadBalancerSecGroup:
+    Description: "The load balancer security group"
+    Value: !Ref LoadBalancerSecGroup
+    Export:
+      Name: !Sub ${EnvironmentName}-LoadBalancerSecGroup

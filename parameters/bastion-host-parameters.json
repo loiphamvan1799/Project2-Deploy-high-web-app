@@ -1,0 +1,22 @@
+[
+    {
+        "ParameterKey": "EnvironmentName",
+        "ParameterValue": "ExamProject2"
+    },
+    {
+        "ParameterKey": "ManagedPolicyArn",
+        "ParameterValue": "arn:aws:iam::aws:policy/AdministratorAccess"
+    },
+    {
+        "ParameterKey": "AMI",
+        "ParameterValue": "ami-0715c1897453cabd1"
+    },
+    {
+        "ParameterKey": "InstanceType",
+        "ParameterValue": "t2.micro"
+    },
+    {
+        "ParameterKey": "KeyPair",
+        "ParameterValue": "bastionhost-keypair"
+    }
+]

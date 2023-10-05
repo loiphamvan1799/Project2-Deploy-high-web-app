@@ -1,0 +1,54 @@
+Description: >
+    Project of LoiPV2 from Udacity - IAM Role and Policy
+
+Parameters:
+  EnvironmentName:
+    Description: An environment namge that will be prefixed to resource names
+    Type: String
+
+Resources:
+  S3IamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: '/'
+
+  S3Policies:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: fullAccess
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: 's3:*'
+            Resource: '*'
+      Roles:
+        - !Ref S3IamRole
+
+  ServerInstanceProfile: 
+    Type: "AWS::IAM::InstanceProfile"
+    Properties: 
+      Roles: 
+        - !Ref S3IamRole
+
+Outputs:
+  IamRole:
+    Description: 'Allow EC2 instances to manage S3 bucket'
+    Value: !Ref ServerInstanceProfile
+    Export:
+      Name: !Sub ${EnvironmentName}-IAM
+
+  S3IamRoleArn:
+    Description: Iam Instance Profile Arn
+    Value: !GetAtt S3IamRole.Arn
+    Export:
+      Name: !Sub ${EnvironmentName}-IAM-ARN

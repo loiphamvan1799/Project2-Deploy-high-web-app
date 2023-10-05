@@ -1,0 +1,18 @@
+[
+    {
+        "ParameterKey": "EnvironmentName",
+        "ParameterValue": "ExamProject2"
+    },
+    {
+        "ParameterKey": "S3BucketName",
+        "ParameterValue": "s3-bucket-prj2-loipv"
+    },
+    {
+        "ParameterKey": "S3BucketKeyName",
+        "ParameterValue": "s3key-prj2-loipv"
+    },
+    {
+        "ParameterKey": "S3BucketLogsName",
+        "ParameterValue": "s3-logs-prj2-loipv"
+    }
+]

@@ -1,0 +1,142 @@
+Description: >
+  Bastion host to connect with instance into private subnets
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+
+  ManagedPolicyArn:
+    Description: The mangage Policy Arn to use S3 bucket
+    Type: String
+
+  AMI:
+    Description: The ImageId of Server IC2 of Bastion Host server
+    Type: String
+
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+
+  KeyPair:
+    Description: EC2 instance type
+    Type: String
+
+Resources:
+  BastionHostSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: BastionSG
+      GroupDescription: SG to access to bastion host
+      VpcId:
+        Fn::ImportValue: !Sub '${EnvironmentName}-VPCID'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+
+  BastionHostInboundRoleSSH:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref BastionHostSecGroup
+      IpProtocol: "tcp"
+      FromPort: 22
+      ToPort: 22
+      CidrIp: 0.0.0.0/0
+
+  WebInboundRoleSSH1:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref BastionHostSecGroup
+      IpProtocol: "tcp"
+      FromPort: 22
+      ToPort: 22
+      CidrIp:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-PUB1-CIDR"
+
+  WebOutboundRoleSSH2:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: BastionHostSecGroup
+      IpProtocol: "tcp"
+      FromPort: 22
+      ToPort: 22
+      CidrIp:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-PUB2-CIDR"
+
+  BastionHostRoleIAM: 
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns: 
+        - !Ref ManagedPolicyArn
+
+  BastionHostInstanceProfile: 
+    Type: "AWS::IAM::InstanceProfile"
+    Properties: 
+      Roles: 
+        - !Ref BastionHostRoleIAM 
+
+  BastionHostInstance1:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref AMI
+      NetworkInterfaces:
+        - GroupSet:
+            - Fn::ImportValue: !Sub '${EnvironmentName}-LoadBalancerSecGroup'
+          AssociatePublicIpAddress: 'true'
+          DeviceIndex: '0'
+          DeleteOnTermination: 'true'
+          SubnetId:
+            Fn::ImportValue: !Sub '${EnvironmentName}-PUB1-SN'
+      KeyName: !Ref KeyPair
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-Bastion-1
+
+  BastionHostInstance2:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref AMI
+      NetworkInterfaces:
+        - GroupSet:
+            - Fn::ImportValue: !Sub '${EnvironmentName}-LoadBalancerSecGroup'
+          AssociatePublicIpAddress: 'true'
+          DeviceIndex: '0'
+          DeleteOnTermination: 'true'
+          SubnetId:
+            Fn::ImportValue: !Sub '${EnvironmentName}-PUB2-SN'
+      KeyName: !Ref KeyPair
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-Bastion-2
+
+Outputs:
+  BastionHostInstance1:
+    Description: An Instance to connect ic2 at private subnet
+    Value: !GetAtt BastionHostInstance1.PrivateIp
+    Export:
+      Name: !Sub ${EnvironmentName}-BASTION1-CIDR
+
+  BastionHostInstance2:
+    Description: An Instance to connect ic2 at private subnet
+    Value: !GetAtt BastionHostInstance2.PrivateIp
+    Export:
+      Name: !Sub ${EnvironmentName}-BASTION2-CIDR
