@@ -85,7 +85,6 @@ Resources:
       # ToDo: AMI ID of Ubuntu Linux machine. Too get one, try creating a VM from the web console. 
       ImageId: !Ref AMI
       # ToDo: Change the key-pair name, as applicable to you. 
-      KeyName: !Ref KeyPair
       SecurityGroups:
       - Ref: WebServerSecGroup
       InstanceType: !Ref InstanceType
