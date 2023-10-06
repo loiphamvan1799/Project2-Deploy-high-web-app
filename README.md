@@ -17,7 +17,7 @@ https://lucid.app/lucidspark/28893646-7f2a-4593-b72d-157b1689d40b/edit?viewport_
 	aws cloudformation create-stack --stack-name networks --region us-east-1 --template-body file://infrastruture/networks.yml --parameters file://parameters/networks-parameters.json
 
 ### s3bucket
-		aws cloudformation create-stack --stack-name s3bucket --region us-east-1 --template-body file://infrastruture/s3bucket.yml --parameters file://parameters/s3bucket-parameters.json
+	aws cloudformation create-stack --stack-name s3bucket --region us-east-1 --template-body file://infrastruture/s3bucket.yml --parameters file://parameters/s3bucket-parameters.json
 
 ### IAMRole
 	aws cloudformation create-stack --stack-name IamRole --region us-east-1 --template-body file://infrastruture/IAMRole.yml --parameters file://parameters/IAMRole-parameters.json --capabilities "CAPABILITY_IAM" "CAPABILITY_NAMED_IAM"
